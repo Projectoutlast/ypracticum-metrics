@@ -22,7 +22,7 @@ type server struct {
 	http *httpserver.Server
 }
 
-func Run() {
+func RunServer() {
 	l := logger.New("debug")
 
 	uc := initUseCases()

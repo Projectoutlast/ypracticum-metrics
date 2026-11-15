@@ -1,6 +1,10 @@
 package service
 
-import "context"
+import (
+	"context"
+
+	models "github.com/Projectoutlast/ypracticum-metrics/internal/model"
+)
 
 type (
 	Counter interface {
@@ -9,5 +13,13 @@ type (
 
 	Gauge interface {
 		Update(ctx context.Context, value float64) error
+	}
+
+	Collector interface {
+		Collect(ctx context.Context) error
+	}
+
+	Metric interface {
+		Get(ctx context.Context) map[string]*models.Metrics
 	}
 )
