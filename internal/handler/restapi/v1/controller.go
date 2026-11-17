@@ -6,7 +6,6 @@ import (
 )
 
 type V1 struct {
-	c service.Counter
-	g service.Gauge
+	m service.Metric
 	l logger.Interface
 }

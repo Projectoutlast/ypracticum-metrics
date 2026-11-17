@@ -6,16 +6,16 @@ import (
 	"syscall"
 
 	"github.com/Projectoutlast/ypracticum-metrics/internal/handler/restapi"
+	"github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
-	counterSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/counter"
-	gaugeSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/gauge"
+	svcMetric "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpserver"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
+	"github.com/Projectoutlast/ypracticum-metrics/pkg/storage"
 )
 
 type useCases struct {
-	c service.Counter
-	g service.Gauge
+	m service.Metric
 }
 
 type server struct {
@@ -25,7 +25,9 @@ type server struct {
 func RunServer() {
 	l := logger.New("debug")
 
-	uc := initUseCases()
+	inMemory := storage.New()
+
+	uc := initUseCases(inMemory)
 
 	s := initServer(l, uc)
 	s.startServer()
@@ -33,10 +35,11 @@ func RunServer() {
 	waitForShutdown(s, l)
 }
 
-func initUseCases() *useCases {
+func initUseCases(s *storage.InMemory) *useCases {
+	metricRepo := metric.New(s)
+
 	return &useCases{
-		c: counterSvc.New(),
-		g: gaugeSvc.New(),
+		m: svcMetric.New(metricRepo),
 	}
 }
 
@@ -46,7 +49,7 @@ func initServer(l logger.Interface, uc *useCases) server {
 		httpserver.WithPort("8080"),
 	)
 
-	restapi.NewRouter(httpServer.Mux, uc.c, uc.g, l)
+	restapi.NewRouter(httpServer.Mux, uc.m, l)
 
 	return server{http: httpServer}
 }

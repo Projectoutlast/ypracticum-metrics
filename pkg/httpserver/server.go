@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 )
 
 type Server struct {
-	Mux *http.ServeMux
+	Mux *chi.Mux
 
 	ctx context.Context
 	eg  *errgroup.Group
@@ -54,7 +55,7 @@ func New(l logger.Interface, opts ...Option) *Server {
 		opt(s)
 	}
 
-	m := http.NewServeMux()
+	m := chi.NewRouter()
 
 	s.Mux = m
 	s.httpServer = &http.Server{

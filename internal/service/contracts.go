@@ -7,19 +7,13 @@ import (
 )
 
 type (
-	Counter interface {
-		Update(ctx context.Context, value int64) error
-	}
-
-	Gauge interface {
-		Update(ctx context.Context, value float64) error
-	}
-
 	Collector interface {
 		Collect(ctx context.Context) error
 	}
 
 	Metric interface {
 		Get(ctx context.Context) map[string]*models.Metrics
+		GetByID(ctx context.Context, id string) (*models.Metrics, error)
+		Update(ctx context.Context, metric *models.Metrics)
 	}
 )
