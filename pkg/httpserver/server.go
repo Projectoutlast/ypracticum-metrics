@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -82,7 +83,7 @@ func (s *Server) Start() {
 		return nil
 	})
 
-	s.logger.Info("restapi server - Server - Started")
+	s.logger.Info(fmt.Sprintf("restapi server - Server - Started on %s", s.addr))
 }
 
 func (s *Server) Notify() <-chan error {

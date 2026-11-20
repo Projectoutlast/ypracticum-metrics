@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/Projectoutlast/ypracticum-metrics/internal/agent"
+	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
 	collectorRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/collector"
 	metricRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
@@ -22,7 +23,7 @@ type useCases struct {
 	m service.Metric
 }
 
-func RunAgent() {
+func RunAgent(cfg *config.Config) {
 	l := logger.New("debug")
 
 	s := storage.New()
@@ -31,7 +32,7 @@ func RunAgent() {
 
 	client := httpclient.New()
 
-	a := agent.New(client, l, uc.c, uc.m)
+	a := agent.New(cfg, client, l, uc.c, uc.m)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

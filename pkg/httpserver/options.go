@@ -1,17 +1,10 @@
 package httpserver
 
 import (
-	"net"
 	"time"
 )
 
 type Option func(*Server)
-
-func WithPort(port string) Option {
-	return func(s *Server) {
-		s.addr = net.JoinHostPort("", port)
-	}
-}
 
 func WithAddr(addr string) Option {
 	return func(s *Server) {

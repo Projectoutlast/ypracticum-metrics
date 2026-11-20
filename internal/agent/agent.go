@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpclient"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
@@ -20,18 +21,43 @@ const (
 type Agent struct {
 	*httpclient.HTTPClient
 
+	serverAddr string
+
+	reportInterval time.Duration
+	pollInterval   time.Duration
+
 	c      service.Collector
 	logger logger.Interface
 	m      service.Metric
 }
 
 func New(
+	cfg *config.Config,
 	client *httpclient.HTTPClient,
 	l logger.Interface,
 	c service.Collector,
 	m service.Metric,
 ) *Agent {
-	return &Agent{HTTPClient: client, c: c, logger: l, m: m}
+	pollInterval := _defaultPollInterval
+	reportInterval := _defaultReportInterval
+
+	if cfg.Agent.PollInterval > 0 {
+		pollInterval = cfg.Agent.PollInterval
+	}
+
+	if cfg.Agent.ReportInterval > 0 {
+		reportInterval = cfg.Agent.ReportInterval
+	}
+
+	return &Agent{
+		HTTPClient:     client,
+		serverAddr:     cfg.Agent.ServerAddr,
+		pollInterval:   pollInterval,
+		reportInterval: reportInterval,
+		c:              c,
+		logger:         l,
+		m:              m,
+	}
 }
 
 func (a *Agent) Run(ctx context.Context) {
@@ -46,7 +72,7 @@ func (a *Agent) pollLoop(ctx context.Context) {
 		case <-ctx.Done():
 			a.logger.Debug("agent - Run - ctx.Done: context done")
 			return
-		case <-time.After(_defaultPollInterval):
+		case <-time.After(a.pollInterval):
 			if err := a.collect(ctx); err != nil {
 				a.logger.Error("agent - Run - a.collect: ", "error", err)
 
@@ -64,7 +90,7 @@ func (a *Agent) reportLoop(ctx context.Context) {
 		case <-ctx.Done():
 			a.logger.Debug("agent - Run - ctx.Done: context done")
 			return
-		case <-time.After(_defaultReportInterval):
+		case <-time.After(a.reportInterval):
 			if err := a.update(ctx); err != nil {
 				a.logger.Error("agent - Run - a.update: ", "error", err)
 			}
@@ -87,8 +113,8 @@ func (a *Agent) update(ctx context.Context) error {
 
 	for _, v := range m {
 		url := fmt.Sprintf(
-			"http://localhost:8080/update/%s/%s/%s",
-			v.MType, v.ID, strconv.Itoa(int(*v.Value)),
+			"http://%s/update/%s/%s/%s",
+			a.serverAddr, v.MType, v.ID, strconv.Itoa(int(*v.Value)),
 		)
 
 		req, err := http.NewRequest(http.MethodPost, url, nil)

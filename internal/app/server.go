@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/handler/restapi"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
@@ -22,14 +23,14 @@ type server struct {
 	http *httpserver.Server
 }
 
-func RunServer() {
+func RunServer(cfg *config.Config) {
 	l := logger.New("debug")
 
 	inMemory := storage.New()
 
 	uc := initUseCases(inMemory)
 
-	s := initServer(l, uc)
+	s := initServer(cfg, l, uc)
 	s.startServer()
 
 	waitForShutdown(s, l)
@@ -43,10 +44,9 @@ func initUseCases(s *storage.InMemory) *useCases {
 	}
 }
 
-func initServer(l logger.Interface, uc *useCases) server {
+func initServer(cfg *config.Config, l logger.Interface, uc *useCases) server {
 	httpServer := httpserver.New(l,
-		httpserver.WithAddr("http://localhost"),
-		httpserver.WithPort("8080"),
+		httpserver.WithAddr(cfg.HTTP.Addr),
 	)
 
 	restapi.NewRouter(httpServer.Mux, uc.m, l)
