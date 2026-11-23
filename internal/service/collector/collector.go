@@ -6,15 +6,18 @@ import (
 	"runtime"
 
 	models "github.com/Projectoutlast/ypracticum-metrics/internal/model"
-	"github.com/Projectoutlast/ypracticum-metrics/internal/repository"
-	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
 )
 
-type UseCase struct {
-	repo repository.Collector
+type Repository interface {
+	Collect(ctx context.Context, metrics map[string]*models.Metrics)
+	Consume(ctx context.Context, id string, sent int64)
 }
 
-func New(repo repository.Collector) service.Collector {
+type UseCase struct {
+	repo Repository
+}
+
+func New(repo Repository) *UseCase {
 	return &UseCase{repo: repo}
 }
 
@@ -24,6 +27,10 @@ func (uc *UseCase) Collect(ctx context.Context) error {
 	uc.repo.Collect(ctx, newMetrics)
 
 	return nil
+}
+
+func (uc *UseCase) Consume(ctx context.Context, id string, sent int64) {
+	uc.repo.Consume(ctx, id, sent)
 }
 
 func collectMetrics() map[string]*models.Metrics {
@@ -46,7 +53,7 @@ func collectMetrics() map[string]*models.Metrics {
 		"LastGC":        metric("LastGC", "gauge", float64(stats.LastGC)),
 		"Lookups":       metric("Lookups", "gauge", float64(stats.Lookups)),
 		"MCacheInuse":   metric("MCacheInuse", "gauge", float64(stats.MCacheInuse)),
-		"MCacheSys":     metric("MCacheSys", "gauge", float64(stats.MCacheInuse)),
+		"MCacheSys":     metric("MCacheSys", "gauge", float64(stats.MCacheSys)),
 		"MSpanInuse":    metric("MSpanInuse", "gauge", float64(stats.MSpanInuse)),
 		"MSpanSys":      metric("MSpanSys", "gauge", float64(stats.MSpanSys)),
 		"Mallocs":       metric("Mallocs", "gauge", float64(stats.Mallocs)),
@@ -65,5 +72,14 @@ func collectMetrics() map[string]*models.Metrics {
 }
 
 func metric(id string, mtype string, v float64) *models.Metrics {
-	return &models.Metrics{ID: id, MType: mtype, Value: new(v)}
+	res := &models.Metrics{ID: id, MType: mtype}
+
+	switch mtype {
+	case models.Counter:
+		res.Delta = new(int64(v))
+	case models.Gauge:
+		res.Value = new(v)
+	}
+
+	return res
 }

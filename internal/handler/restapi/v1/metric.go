@@ -13,8 +13,6 @@ import (
 
 func (r *V1) getMetric(w http.ResponseWriter, req *http.Request) {
 	if !slices.Contains([]string{models.Counter, models.Gauge}, req.PathValue("type")) {
-		r.l.Error("v1 - getMetric - req.PathValue(type): metrict type must be counter or gauge")
-
 		w.WriteHeader(http.StatusBadRequest)
 
 		return
@@ -22,8 +20,6 @@ func (r *V1) getMetric(w http.ResponseWriter, req *http.Request) {
 
 	name, err := parseMetricName(req.PathValue("name"))
 	if err != nil {
-		r.l.Error("v1 - getMetric - parseMetricName: ", "error", err)
-
 		w.WriteHeader(http.StatusBadRequest)
 
 		return
@@ -47,7 +43,9 @@ func (r *V1) getMetric(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
-	if _, err := w.Write([]byte(strconv.FormatFloat(*m.Value, 'f', -1, 64))); err != nil {
+	res := metricToString(m)
+
+	if _, err := w.Write([]byte(res)); err != nil {
 		r.l.Error("v1 - getMetric - w.Write: ", "error", err)
 	}
 }
@@ -58,13 +56,10 @@ func (r *V1) metrics(w http.ResponseWriter, req *http.Request) {
 	var res []string
 
 	for k, v := range m {
-		var val float64
 
-		if v.Value != nil {
-			val = *v.Value
-		}
+		val := metricToString(v)
 
-		res = append(res, fmt.Sprintf("%s: %f", k, val))
+		res = append(res, fmt.Sprintf("%s: %s", k, val))
 	}
 
 	metricList := strings.Join(res, "\n\n")
@@ -75,4 +70,17 @@ func (r *V1) metrics(w http.ResponseWriter, req *http.Request) {
 	if _, err := w.Write([]byte(metricList)); err != nil {
 		r.l.Error("v1 - metrics - w.Write: ", "error", err)
 	}
+}
+
+func metricToString(m *models.Metrics) string {
+	var res string
+
+	switch m.MType {
+	case models.Counter:
+		res = strconv.Itoa(int(*m.Delta))
+	case models.Gauge:
+		res = strconv.FormatFloat(*m.Value, 'f', -1, 64)
+	}
+
+	return res
 }

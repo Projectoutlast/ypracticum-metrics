@@ -7,29 +7,29 @@ import (
 	models "github.com/Projectoutlast/ypracticum-metrics/internal/model"
 )
 
-func parseMetricValue(mType, value string) (float64, error) {
-	var res float64
+func parseMetricValue(mType, value, name string) (*models.Metrics, error) {
+	m := &models.Metrics{ID: name, MType: mType}
 
 	switch mType {
 	case models.Counter:
 		parsed, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 
-		res = float64(parsed)
+		m.Delta = new(parsed)
 	case models.Gauge:
 		parsed, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 
-		res = parsed
+		m.Value = new(parsed)
 	default:
-		return 0, errors.New("unknown metric type")
+		return nil, errors.New("unknown metric type")
 	}
 
-	return res, nil
+	return m, nil
 }
 
 func parseMetricName(name string) (string, error) {

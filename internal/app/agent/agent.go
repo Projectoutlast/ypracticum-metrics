@@ -10,7 +10,6 @@ import (
 	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
 	collectorRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/collector"
 	metricRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
-	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
 	collectorSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/collector"
 	metricSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpclient"
@@ -19,8 +18,8 @@ import (
 )
 
 type useCases struct {
-	c service.Collector
-	m service.Metric
+	c *collectorSvc.UseCase
+	m *metricSvc.UseCase
 }
 
 func RunAgent(cfg *config.Config) {

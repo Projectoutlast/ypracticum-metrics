@@ -4,7 +4,6 @@ import (
 	"context"
 
 	models "github.com/Projectoutlast/ypracticum-metrics/internal/model"
-	"github.com/Projectoutlast/ypracticum-metrics/internal/repository"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/storage"
 )
 
@@ -12,12 +11,13 @@ type Repo struct {
 	*storage.InMemory
 }
 
-func New(s *storage.InMemory) repository.Collector {
+func New(s *storage.InMemory) *Repo {
 	return &Repo{s}
 }
 
 func (r *Repo) Collect(ctx context.Context, metrics map[string]*models.Metrics) {
-	r.Mu.Lock()
+	r.Lock()
+	defer r.Unlock()
 
 	for k, v := range metrics {
 		if _, ok := r.DB[k]; !ok {
@@ -30,19 +30,32 @@ func (r *Repo) Collect(ctx context.Context, metrics map[string]*models.Metrics) 
 
 		switch curr.MType {
 		case models.Counter:
-			if curr != nil {
-				res := *curr.Value + *v.Value
+			if curr.Delta != nil && v.Delta != nil {
+				res := *curr.Delta + *v.Delta
 
-				curr.Value = new(res)
+				curr.Delta = new(res)
 			}
 		case models.Gauge:
-			if curr != nil {
-				curr.Value = v.Value
-			}
+			curr.Value = v.Value
 		}
 
 		r.DB[k] = curr
 	}
+}
 
-	r.Mu.Unlock()
+func (r *Repo) Consume(ctx context.Context, id string, sent int64) {
+	r.Lock()
+	defer r.Unlock()
+
+	curr, ok := r.DB[id]
+	if !ok || curr.Delta == nil {
+		return
+	}
+
+	res := *curr.Delta - sent
+	if res < 0 {
+		res = 0
+	}
+
+	curr.Delta = new(res)
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/handler/restapi"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
-	"github.com/Projectoutlast/ypracticum-metrics/internal/service"
 	svcMetric "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpserver"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
@@ -16,7 +15,7 @@ import (
 )
 
 type useCases struct {
-	m service.Metric
+	m *svcMetric.UseCase
 }
 
 type server struct {

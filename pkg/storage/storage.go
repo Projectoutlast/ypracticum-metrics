@@ -8,9 +8,17 @@ import (
 
 type InMemory struct {
 	DB map[string]*models.Metrics
-	Mu sync.Mutex
+	mu sync.Mutex
 }
 
 func New() *InMemory {
 	return &InMemory{DB: make(map[string]*models.Metrics)}
+}
+
+func (m *InMemory) Lock() {
+	m.mu.Lock()
+}
+
+func (m *InMemory) Unlock() {
+	m.mu.Unlock()
 }
