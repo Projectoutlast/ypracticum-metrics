@@ -11,7 +11,6 @@ import (
 	svcMetric "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpserver"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
-	"github.com/Projectoutlast/ypracticum-metrics/pkg/storage"
 )
 
 type useCases struct {
@@ -25,9 +24,7 @@ type server struct {
 func RunServer(cfg *config.Config) {
 	l := logger.New("debug")
 
-	inMemory := storage.New()
-
-	uc := initUseCases(inMemory)
+	uc := initUseCases()
 
 	s := initServer(cfg, l, uc)
 	s.startServer()
@@ -35,8 +32,8 @@ func RunServer(cfg *config.Config) {
 	waitForShutdown(s, l)
 }
 
-func initUseCases(s *storage.InMemory) *useCases {
-	metricRepo := metric.New(s)
+func initUseCases() *useCases {
+	metricRepo := metric.New()
 
 	return &useCases{
 		m: svcMetric.New(metricRepo),

@@ -3,24 +3,25 @@ package metric
 import (
 	"context"
 	"maps"
+	"sync"
 
 	models "github.com/Projectoutlast/ypracticum-metrics/internal/model"
-	"github.com/Projectoutlast/ypracticum-metrics/pkg/storage"
 )
 
 type Repo struct {
-	*storage.InMemory
+	db map[string]*models.Metrics
+	mu sync.Mutex
 }
 
-func New(s *storage.InMemory) *Repo {
-	return &Repo{s}
+func New() *Repo {
+	return &Repo{db: make(map[string]*models.Metrics)}
 }
 
 func (r *Repo) GetByID(ctx context.Context, id string) (*models.Metrics, error) {
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	m, ok := r.DB[id]
+	m, ok := r.db[id]
 	if !ok {
 		return nil, models.ErrMetricNotFound
 	}
@@ -29,23 +30,23 @@ func (r *Repo) GetByID(ctx context.Context, id string) (*models.Metrics, error) 
 }
 
 func (r *Repo) GetAll(ctx context.Context) map[string]*models.Metrics {
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	res := make(map[string]*models.Metrics, len(r.DB))
+	res := make(map[string]*models.Metrics, len(r.db))
 
-	maps.Copy(res, r.DB)
+	maps.Copy(res, r.db)
 
 	return res
 }
 
 func (r *Repo) Update(ctx context.Context, metric *models.Metrics) {
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	m, ok := r.DB[metric.ID]
+	m, ok := r.db[metric.ID]
 	if !ok {
-		r.DB[metric.ID] = metric
+		r.db[metric.ID] = metric
 
 		return
 	}
@@ -61,5 +62,47 @@ func (r *Repo) Update(ctx context.Context, metric *models.Metrics) {
 		m.Value = metric.Value
 	}
 
-	r.DB[metric.ID] = m
+	r.db[metric.ID] = m
+}
+
+func (r *Repo) Collect(ctx context.Context, metrics map[string]*models.Metrics) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for k, v := range metrics {
+		if _, ok := r.db[k]; !ok {
+			r.db[k] = v
+
+			continue
+		}
+
+		curr := r.db[k]
+
+		switch curr.MType {
+		case models.Counter:
+			if curr.Delta != nil && v.Delta != nil {
+				res := *curr.Delta + *v.Delta
+
+				curr.Delta = new(res)
+			}
+		case models.Gauge:
+			curr.Value = v.Value
+		}
+
+		r.db[k] = curr
+	}
+}
+
+func (r *Repo) Consume(ctx context.Context, id string, sent int64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	curr, ok := r.db[id]
+	if !ok || curr.Delta == nil {
+		return
+	}
+
+	res := max(*curr.Delta-sent, 0)
+
+	curr.Delta = new(res)
 }

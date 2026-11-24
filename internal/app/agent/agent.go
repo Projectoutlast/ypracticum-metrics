@@ -8,13 +8,11 @@ import (
 
 	"github.com/Projectoutlast/ypracticum-metrics/internal/agent"
 	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
-	collectorRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/collector"
 	metricRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
 	collectorSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/collector"
 	metricSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpclient"
 	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
-	"github.com/Projectoutlast/ypracticum-metrics/pkg/storage"
 )
 
 type useCases struct {
@@ -25,9 +23,7 @@ type useCases struct {
 func RunAgent(cfg *config.Config) {
 	l := logger.New("debug")
 
-	s := storage.New()
-
-	uc := initUseCases(s)
+	uc := initUseCases()
 
 	client := httpclient.New()
 
@@ -39,12 +35,11 @@ func RunAgent(cfg *config.Config) {
 	a.Run(ctx)
 }
 
-func initUseCases(s *storage.InMemory) *useCases {
-	collStore := collectorRepo.New(s)
-	metricStore := metricRepo.New(s)
+func initUseCases() *useCases {
+	metricStore := metricRepo.New()
 
 	return &useCases{
-		c: collectorSvc.New(collStore),
+		c: collectorSvc.New(metricStore),
 		m: metricSvc.New(metricStore),
 	}
 }
