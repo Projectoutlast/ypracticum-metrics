@@ -1,0 +1,45 @@
+package agent
+
+import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/Projectoutlast/ypracticum-metrics/internal/agent"
+	"github.com/Projectoutlast/ypracticum-metrics/internal/config"
+	metricRepo "github.com/Projectoutlast/ypracticum-metrics/internal/repository/persistent/metric"
+	collectorSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/collector"
+	metricSvc "github.com/Projectoutlast/ypracticum-metrics/internal/service/metric"
+	"github.com/Projectoutlast/ypracticum-metrics/pkg/httpclient"
+	"github.com/Projectoutlast/ypracticum-metrics/pkg/logger"
+)
+
+type useCases struct {
+	c *collectorSvc.UseCase
+	m *metricSvc.UseCase
+}
+
+func RunAgent(cfg *config.Config) {
+	l := logger.New("debug")
+
+	uc := initUseCases()
+
+	client := httpclient.New()
+
+	a := agent.New(cfg, client, l, uc.c, uc.m)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	a.Run(ctx)
+}
+
+func initUseCases() *useCases {
+	metricStore := metricRepo.New()
+
+	return &useCases{
+		c: collectorSvc.New(metricStore),
+		m: metricSvc.New(metricStore),
+	}
+}
